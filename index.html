@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sipariş Kontrol">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Sipariş Kontrol</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+:root{--bg:#F2F2F7;--cell:#FFFFFF;--bar:rgba(249,249,249,.94);--sep:rgba(60,60,67,.29);--t1:#000;--t2:rgba(60,60,67,.6);--t3:rgba(60,60,67,.3);--fill:rgba(118,118,128,.12);--fill2:rgba(118,118,128,.2);
+--blue:#007AFF;--green:#34C759;--red:#FF3B30;--orange:#FF9500;--purple:#AF52DE;--xl:#1D7044;--ft:#D9670B;
+--gT:#248A3D;--gB:rgba(52,199,89,.15);--rT:#D70015;--rB:rgba(255,59,48,.13);--oT:#C93400;--oB:rgba(255,149,0,.16);--pT:#8944AB;--pB:rgba(175,82,222,.14);--bT:#0040DD;--bB:rgba(0,122,255,.12);--nB:rgba(118,118,128,.14)}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--cell:#1C1C1E;--bar:rgba(22,22,24,.94);--sep:rgba(84,84,88,.6);--t1:#FFF;--t2:rgba(235,235,245,.6);--t3:rgba(235,235,245,.3);--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.36);
+--blue:#0A84FF;--green:#30D158;--red:#FF453A;--orange:#FF9F0A;--purple:#BF5AF2;--xl:#4CBB7A;--ft:#FF9F0A;--gT:#30D158;--rT:#FF6961;--oT:#FFB340;--pT:#DA8FFF;--bT:#409CFF}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--t1);font:17px/1.3 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;overflow:hidden;overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.vp{position:fixed;left:0;right:0;top:0;bottom:calc(50px + env(safe-area-inset-bottom));overflow:hidden}
+.scr{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 8px) 16px 28px;background:var(--bg);transition:transform .4s cubic-bezier(.2,.85,.25,1),opacity .28s ease}
+.off{opacity:0;transform:translateY(10px);pointer-events:none}
+.pr{transform:translateX(100%)}.pl{transform:translateX(-28%);opacity:.6;pointer-events:none}
+.lt{font-size:34px;font-weight:700;letter-spacing:.2px;margin:8px 4px 14px}
+.nb{position:sticky;top:0;display:flex;align-items:center;justify-content:center;height:44px;font-weight:600;margin:0 -16px;background:var(--bg);z-index:3}
+.bk{position:absolute;left:8px;color:var(--blue);display:flex;align-items:center;gap:2px;font-weight:400}
+.sh{font-size:13px;color:var(--t2);margin:22px 16px 7px;text-transform:none}
+.gr{background:var(--cell);border-radius:10px;overflow:hidden}
+.cl{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:44px;position:relative;background:var(--cell)}
+.gr>*+*:before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep);z-index:2}
+.tp:active{background:var(--fill)}
+.f1{flex:1;min-width:0}.sm{font-size:13px;color:var(--t2)}.ch{color:var(--t3);font-size:15px}
+.lb{color:var(--blue);font-size:15px}
+.ip{font-size:12px;font-weight:500;padding:3px 9px;border-radius:11px;white-space:nowrap}
+.i-r{background:var(--rB);color:var(--rT)}.i-o{background:var(--oB);color:var(--oT)}.i-p{background:var(--pB);color:var(--pT)}.i-g{background:var(--gB);color:var(--gT)}.i-b{background:var(--bB);color:var(--bT)}.i-n{background:var(--nB);color:var(--t2)}
+.xl{color:var(--xl)}.ft{color:var(--ft)}
+.ic{width:22px;height:22px;flex:none}
+.sg{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin:0 0 4px}
+.sg button{flex:1;font-size:13px;padding:6px 0;border-radius:7px;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .2s}
+.sg .on{background:var(--cell);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.sg b{font-size:12px;font-weight:600;min-width:20px;height:20px;padding:0 6px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center}
+.tb{position:fixed;left:0;right:0;bottom:0;height:calc(50px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--bar);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:.5px solid var(--sep);display:flex;z-index:20}
+.tb button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:var(--t2);position:relative}
+.tb .on{color:var(--blue)}
+.bdg{position:absolute;top:2px;left:50%;margin-left:5px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.pb{width:100%;height:50px;border-radius:14px;background:var(--blue);color:#fff;font-weight:600;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.sw{position:relative;overflow:hidden;background:var(--green)}
+.sa{position:absolute;top:0;right:0;bottom:0;width:88px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;gap:2px}
+.sf{position:relative;z-index:1;transition:transform .25s ease;touch-action:pan-y}
+.se{display:flex;align-items:center;gap:6px;background:var(--fill);border-radius:10px;padding:0 10px;height:36px}
+.se input{flex:1;border:0;background:none;font:inherit;font-size:17px;color:var(--t1);outline:none;min-width:0}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .3s;z-index:30}
+.st{position:fixed;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;background:var(--bg);border-radius:14px 14px 0 0;padding:8px 16px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .4s cubic-bezier(.2,.85,.25,1);z-index:31}
+.ov.on{opacity:1;pointer-events:auto}.st.on{transform:none}
+.gb{width:36px;height:5px;border-radius:3px;background:var(--fill2);margin:0 auto 14px}
+.toast{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:rgba(30,30,30,.92);color:#fff;font-size:14px;padding:10px 16px;border-radius:12px;opacity:0;transition:.3s;z-index:40;max-width:86%;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.sp{width:18px;height:18px;border:2px solid var(--fill2);border-top-color:var(--blue);border-radius:50%;animation:r .8s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+.det{max-height:0;overflow:hidden;transition:max-height .3s ease;color:var(--blue);font-size:13px}
+.num{font-weight:600;font-size:17px;text-align:right}
+.bos{padding:40px 20px;text-align:center;color:var(--t2);font-size:15px}
+input[type=file]{display:none}
+.ti{width:100%;height:44px;border:0;background:var(--cell);color:var(--t1);font:inherit;padding:0 16px;outline:none}
+</style>
+</head>
+<body>
+<div class="vp">
+  <div class="scr" id="t0"></div>
+  <div class="scr off" id="t1"></div>
+  <div class="scr pr" id="d1"></div>
+  <div class="scr off" id="t2"></div>
+  <div class="scr off" id="t3"></div>
+</div>
+<nav class="tb" id="tb">
+  <button data-i="0" class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9.5 13.5 12 11l2.5 2.5"/></svg>İstek form / liste</button>
+  <button data-i="1"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><span class="bdg" id="bdg" hidden></span>Rapor</button>
+  <button data-i="2"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 6h9M11 12h9M12 18h8M4 16a2 2 0 1 1 4 0c0 .6-.4 1-1 1.5L4 20h4M6 10V4L4 6"/></svg>Birleşik</button>
+  <button data-i="3"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3a1.7 1.7 0 0 1 3.4 0 1.7 1.7 0 0 0 2.6 1.1 1.7 1.7 0 0 1 2.3 2.3 1.7 1.7 0 0 0 1.1 2.6 1.7 1.7 0 0 1 0 3.4 1.7 1.7 0 0 0-1.1 2.6 1.7 1.7 0 0 1-2.3 2.3 1.7 1.7 0 0 0-2.6 1.1 1.7 1.7 0 0 1-3.4 0 1.7 1.7 0 0 0-2.6-1.1 1.7 1.7 0 0 1-2.3-2.3 1.7 1.7 0 0 0-1.1-2.6 1.7 1.7 0 0 1 0-3.4 1.7 1.7 0 0 0 1.1-2.6 1.7 1.7 0 0 1 2.3-2.3 1.7 1.7 0 0 0 2.6-1.1z"/><circle cx="12" cy="12" r="3"/></svg>Ayarlar</button>
+</nav>
+<div class="ov" id="ov"></div>
+<div class="st" id="st"></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="fForm" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+<input type="file" id="fSip" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="logic.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
