@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const SURUM = '0.1.2 · 10.11.2026';
+  const SURUM = '0.2 · 10.11.2026';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const IC = {
@@ -25,7 +25,7 @@
   let ayar = ayarYukle();
 
   // ---------- Oturum durumu (onaylar kaydedilmez) ----------
-  const D = { form: null, formDosya: '', sip: null, sipDosya: '', cevap: { form: {} }, durum: { onay: {}, red: {} }, sonuc: null, filtre: 0, acikBolum: null, ara: '', yukleniyor: '' };
+  const D = { form: null, formDosya: '', sip: null, sipDosya: '', cevap: { form: {} }, durum: { onay: {}, red: {} }, sonuc: null, filtre: 0, acikBolum: null, ara: '', yukleniyor: '', kayit: [], gecmis: [], ayarSayfa: null };
 
   function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.z); toast.z = setTimeout(() => t.classList.remove('on'), 2600); }
 
@@ -33,12 +33,14 @@
   const T = [0, 1, 2, 3].map(i => $('t' + i));
   let aktif = 0;
   function sekme(i) {
-    aktif = i; geri(true); sayfaKapat();
+    aktif = i; geri(true); ayarGeri(true); sayfaKapat();
     T.forEach((t, j) => t.className = 'scr' + (j === i ? '' : ' off'));
     document.querySelectorAll('#tb button').forEach(b => b.classList.toggle('on', +b.dataset.i === i));
   }
   function ileri() { T[1].className = 'scr pl'; $('d1').className = 'scr'; $('d1').scrollTop = 0; }
   function geri(sessiz) { $('d1').className = 'scr pr'; if (!sessiz) T[1].className = 'scr'; }
+  function ayarIleri() { T[3].className = 'scr pl'; $('d3').className = 'scr'; $('d3').scrollTop = 0; }
+  function ayarGeri(sessiz) { D.ayarSayfa = null; $('d3').className = 'scr pr'; if (!sessiz) T[3].className = 'scr'; }
   document.querySelectorAll('#tb button').forEach(b => b.onclick = () => sekme(+b.dataset.i));
   function sayfaAc(html) { $('st').innerHTML = '<div class="gb"></div>' + html; $('ov').classList.add('on'); $('st').classList.add('on'); }
   function sayfaKapat() { $('ov').classList.remove('on'); $('st').classList.remove('on'); }
@@ -65,7 +67,7 @@
         if (!x.length) throw new Error('Bu dosyada istek formu bulunamadı. "Malzeme Numarası" ve "Miktar" başlıklı tablo arandı.');
         D.form = x; D.formDosya = f.name; D.cevap = { form: {} };
       } else { D.sip = SK.siparisOku(rows); D.sipDosya = f.name; }
-      D.durum = { onay: {}, red: {} }; D.sonuc = null;
+      D.durum = { onay: {}, red: {} }; D.sonuc = null; D.kayit = []; D.gecmis = [];
     }).catch(err => toast(err.message || 'Dosya okunamadı.')).then(() => { D.yukleniyor = ''; ciz0(); if (D.form && D.sip) setTimeout(baslat, 500); });
   }
 
@@ -110,12 +112,12 @@
 
   // ---------- Hesap ----------
   function hesapla() { D.sonuc = SK.karsilastir(D.form, D.sip, ayar, D.cevap, D.durum); cizHepsi(); }
-  function cizHepsi() { ciz0(); ciz1(); if (D.acikBolum) cizDetay(); ciz2(); ciz3(); }
+  function cizHepsi() { ciz0(); ciz1(); if (D.acikBolum) cizDetay(); ciz2(); ciz3(); cizAyarDetay(); }
 
   // ---------- 0: İstek form / liste ----------
   function yuklemeGrubu(baslik, tur, dosya, bilgi) {
     const yuk = D.yukleniyor === tur;
-    return `<div class="sh">${baslik}</div><div class="gr">
+    return `<div class="shk">${baslik}</div><div class="gr">
       ${yuk ? '<div class="cl"><span class="sp"></span><span class="f1">Okunuyor…</span></div>' : dosya ? `<div class="cl"><span style="color:var(--green)">${IC.check}</span><div class="f1">${esc(dosya)}<div class="sm">${bilgi}</div></div></div>` : ''}
       <div class="cl tp xl" data-f="${tur}">${IC.table}<span class="f1">Excel seç</span>${IC.chev}</div>
       <div class="cl tp ft" data-foto="1">${IC.cam}<span class="f1">Fotoğraf çek</span>${IC.chev}</div></div>`;
@@ -146,6 +148,7 @@
     const seg = (i, ad, n, renk) => `<button data-v="${i}" class="${D.filtre === i ? 'on' : ''}">${ad} <b style="${renk}">${n}</b></button>`;
     T[1].innerHTML = `<div class="lt">Rapor</div>
       <div class="sg">${seg(0, 'Sorunlu', sor, 'background:var(--red);color:#fff')}${seg(1, 'Onaylanan', tum - sor, 'background:var(--green);color:#fff')}${seg(2, 'Tümü', tum, 'background:var(--fill2)')}</div>
+      ${D.kayit.length ? `<div class="sh">Düzeltmeler (${D.kayit.length})</div><div class="gr">${D.kayit.slice().reverse().map(k => `<div class="cl" style="font-size:14px"><span class="sm" style="flex:none">${k.saat}</span><span class="f1">${esc(k.metin)}</span></div>`).join('')}<button class="cl tp lb" id="geriAl" style="width:100%;justify-content:center">Son düzeltmeyi geri al</button></div>` : ''}
       <div class="sh">${R.dogruSatir} satır doğru · ${tum} bölüm</div>
       <div class="gr">${L.map(b => {
         const ilk = b.sorun.filter(x => !x.onayli).sort((a, c) => SIRA.indexOf(a.tip) - SIRA.indexOf(c.tip))[0];
@@ -153,6 +156,78 @@
       }).join('') || '<div class="cl sm">Bu grupta bölüm yok</div>'}</div>`;
     T[1].querySelectorAll('.sg button').forEach(b => b.onclick = () => { D.filtre = +b.dataset.v; ciz1(); });
     T[1].querySelectorAll('[data-b]').forEach(e => e.onclick = () => { D.acikBolum = e.dataset.b; cizDetay(); ileri(); });
+    if ($('geriAl')) $('geriAl').onclick = geriAl;
+  }
+
+  // ---------- Düzeltme ----------
+  const saat = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  function anlik() { D.gecmis.push({ form: JSON.stringify(D.form), sip: JSON.stringify(D.sip), n: D.kayit.length }); }
+  function kaydet(metinler) { const s = saat(); metinler.forEach(m => D.kayit.push({ saat: s, metin: m })); }
+  function geriAl() {
+    const g = D.gecmis.pop(); if (!g) return;
+    D.form = JSON.parse(g.form); D.sip = JSON.parse(g.sip); D.kayit.length = g.n;
+    hesapla(); toast('Son düzeltme geri alındı.');
+  }
+  function duzeltAc(s, b) {
+    const fr = (s.fRef || []).map(r => ({ r, k: D.form[r[0]].kalemler[r[1]] }));
+    const sr = (s.sRef || []).map(i => ({ i, k: D.sip[i] }));
+    const q = [];
+    const yap = (ad, fn) => q.push({ ad, fn });
+    if (s.tip === 'EKSIK' && fr.length) yap('Siparişe ekle (' + s.form + ')', () => {
+      const k = fr[0].k;
+      D.sip.push({ kod: s.kod.split('/')[0], ad: k.ad, ad2: '', miktar: s.form, birim: k.birim, birimHam: k.birimHam || k.birim, bolumHam: b, satir: 0 });
+      return [b + ': ' + s.kod + ' ' + k.ad + ' siparişe eklendi (' + s.form + ')'];
+    });
+    if (s.tip === 'FAZLA' && sr.length) yap('Siparişten çıkar', () => {
+      sr.map(x => x.i).sort((a, c) => c - a).forEach(i => D.sip.splice(i, 1));
+      return [b + ': ' + s.kod + ' ' + s.ad + ' siparişten çıkarıldı (' + s.siparis + ')'];
+    });
+    if (s.tip === 'KODHATA') {
+      yap('Siparişteki kodu ' + s.kod + ' yap', () => { sr.forEach(x => { x.k.kod = s.kod; }); return [b + ': siparişte kod ' + s.kod2 + ' → ' + s.kod]; });
+      yap('Formdaki kodu ' + s.kod2 + ' yap', () => { fr.forEach(x => { x.k.kod = s.kod2; }); return [b + ': formda kod ' + s.kod + ' → ' + s.kod2]; });
+    }
+    if ((s.tip === 'ADET' || s.tip === 'BIRIM') && sr.length === 1) yap('Siparişi ' + s.form + ' yap', () => { const e = sr[0].k.miktar; sr[0].k.miktar = s.form; return [b + ': ' + s.kod + ' sipariş adedi ' + e + ' → ' + s.form]; });
+    if (s.tip === 'ESKIKOD') yap('Siparişte ' + s.kod2 + ' yap', () => { sr.forEach(x => { x.k.kod = s.kod2; }); return [b + ': siparişte eski kod ' + s.kod + ' → ' + s.kod2]; });
+
+    const [m1, m2] = satirMetni(s);
+    const satir = (taraf, idx, k, silinir) => `<div class="cl" style="flex-wrap:wrap;gap:8px">
+        <div style="flex-basis:100%;font-size:14px;display:flex;gap:8px;align-items:center"><span class="ip i-${taraf === 'f' ? 'b' : 'n'}">${taraf === 'f' ? 'Form' : 'Sipariş'}</span><span class="f1" data-ad="${taraf}${idx}">${esc(k.ad)}</span>${silinir ? `<button class="sil" data-sil="${idx}">Sil</button>` : ''}</div>
+        <label class="fi" style="flex:2">Kod<input data-${taraf}k="${idx}" value="${esc(k.kod)}" inputmode="numeric"></label>
+        <label class="fi" style="flex:1">Adet<input data-${taraf}m="${idx}" value="${k.miktar}" inputmode="decimal"></label></div>`;
+    sayfaAc(`<div style="display:flex;gap:8px;align-items:center">${etiket(s)}<span class="sm">${esc(b)}</span></div>
+      <div style="font-weight:600;font-size:17px;margin-top:8px">${esc(m1)}</div><div class="sm">${esc(m2)}</div>
+      ${q.length ? '<div class="sha" style="margin-left:2px">Hızlı düzeltme</div><div class="qa">' + q.map((x, i) => `<button data-q="${i}">${esc(x.ad)}</button>`).join('') + '</div>' : ''}
+      ${fr.length + sr.length ? '<div class="sha" style="margin-left:2px">Elle düzelt</div><div class="gr">' + fr.map((x, i) => satir('f', i, x.k, false)).join('') + sr.map((x, i) => satir('s', i, x.k, true)).join('') + '</div>' : ''}
+      <div class="sm" style="margin:10px 4px">Sipariş listesindeki düzeltmeler mail ile gönderilen Excel'e yansır. Formdaki düzeltmeler sadece bu karşılaştırmada geçerlidir.</div>
+      ${fr.length + sr.length ? '<button class="pb" id="dzKaydet">Kaydet</button>' : ''}<button class="lb" id="dzVaz" style="display:block;width:100%;margin-top:16px">Vazgeç</button>`);
+    const silinen = new Set();
+    $('st').querySelectorAll('[data-sil]').forEach(e => e.onclick = () => {
+      const i = +e.dataset.sil; silinen.has(i) ? silinen.delete(i) : silinen.add(i);
+      e.textContent = silinen.has(i) ? 'Geri al' : 'Sil';
+      $('st').querySelector('[data-ad="s' + i + '"]').classList.toggle('ust', silinen.has(i));
+    });
+    $('st').querySelectorAll('[data-q]').forEach(e => e.onclick = () => { anlik(); kaydet(q[+e.dataset.q].fn()); sayfaKapat(); hesapla(); toast('Düzeltildi.'); });
+    $('dzVaz').onclick = sayfaKapat;
+    if ($('dzKaydet')) $('dzKaydet').onclick = () => {
+      const oku = (sel, i) => $('st').querySelector('[data-' + sel + '="' + i + '"]').value.trim();
+      const deg = [], uygula = [];
+      let hata = '';
+      const kontrol = (taraf, x, i, yer) => {
+        const kod = oku(taraf + 'k', i).replace(/\D/g, ''), m = Number(oku(taraf + 'm', i).replace(',', '.'));
+        if (isNaN(m) || m < 0) { hata = 'Adet bir sayı olmalı.'; return; }
+        if (kod !== String(x.k.kod || '')) { deg.push(b + ': ' + yer + ' ' + (x.k.ad || '') + ' kod ' + (x.k.kod || 'boş') + ' → ' + (kod || 'boş')); uygula.push(() => { x.k.kod = kod; }); }
+        if (m !== x.k.miktar) { deg.push(b + ': ' + yer + ' ' + (x.k.kod || x.k.ad) + ' adet ' + x.k.miktar + ' → ' + m); uygula.push(() => { x.k.miktar = m; }); }
+      };
+      fr.forEach((x, i) => kontrol('f', x, i, 'formda'));
+      sr.forEach((x, i) => { if (!silinen.has(i)) kontrol('s', x, i, 'siparişte'); });
+      if (hata) { toast(hata); return; }
+      silinen.forEach(i => deg.push(b + ': ' + sr[i].k.kod + ' ' + sr[i].k.ad + ' siparişten silindi'));
+      if (!deg.length) { sayfaKapat(); return; }
+      anlik();
+      uygula.forEach(f => f());
+      [...silinen].map(i => sr[i].i).sort((a, c) => c - a).forEach(i => D.sip.splice(i, 1));
+      kaydet(deg); sayfaKapat(); hesapla(); toast('Düzeltildi.');
+    };
   }
 
   function satirMetni(s) {
@@ -182,12 +257,12 @@
       if (onaylanir) sag = `<button class="lb" data-onay="${i}">Doğru</button>`;
       if (s.tip === 'TAHMIN' && !s.onayli) sag = `<button class="lb" data-th="${i}" style="color:var(--green);font-weight:600">✔</button><button class="lb" data-tr="${i}" style="color:var(--red);font-weight:600;margin-left:12px">✖</button>`;
       if (s.tip === 'KODHATA' && !s.onayli) sag = `<button class="lb" data-es="${i}" style="font-size:13px;text-align:right">Eşdeğer<br>kaydet</button>`;
-      const ic = `<div class="cl${onaylanir ? ' sf' : ''}" ${onaylanir ? 'data-sw="' + i + '"' : ''}>${etiket(s)}<div class="f1" style="font-size:15px">${esc(m1)}<div class="sm">${esc(m2)}</div></div>${sag}</div>`;
+      const ic = `<div class="cl tp${onaylanir ? ' sf' : ''}" data-dz="${i}" ${onaylanir ? 'data-sw="' + i + '"' : ''}>${etiket(s)}<div class="f1" style="font-size:15px">${esc(m1)}<div class="sm">${esc(m2)}</div></div>${sag}<span class="ch">&#x203A;</span></div>`;
       return onaylanir ? `<div class="sw"><button class="sa" data-onay="${i}"><span style="font-size:20px">✓</span>Doğru</button>${ic}</div>` : ic;
     };
     const kaydir = sorunlar.some(s => (s.tip === 'ADET' || s.tip === 'BIRIM') && !s.onayli);
     $('d1').innerHTML = `<div class="nb"><button class="bk" id="geri"><span style="font-size:28px;line-height:20px">&#x2039;</span>Rapor</button>${esc(b.ad)}</div>
-      <div class="sh">${b.acik ? b.acik + ' sorun' : 'Sorun yok'}${kaydir ? ' · adet ve birim farklarını sola kaydırarak onaylayabilirsin' : ''}</div>
+      <div class="sh">${b.acik ? b.acik + ' sorun · düzeltmek için satıra dokun' : 'Sorun yok'}${kaydir ? ' · adet ve birim farklarını sola kaydırarak onaylayabilirsin' : ''}</div>
       ${sorunlar.length ? '<div class="gr">' + sorunlar.map(satir).join('') + '</div>' : ''}
       <div class="sh">Doğru olanlar (${b.dogru.length})</div>
       <div class="gr">${b.dogru.map(d => `<div class="cl"><span style="color:var(--green)">✓</span><div class="f1" style="font-size:15px">${esc(d.kod)} ${esc(d.ad)}${d.not ? '<div class="sm">' + esc(d.not) + '</div>' : ''}</div><span class="sm">${d.miktar} ${esc(d.birim)}</span></div>`).join('') || '<div class="cl sm">Yok</div>'}</div>`;
@@ -202,15 +277,19 @@
       ayar.esdeger[s.kod] = s.kod2; ayarKaydet(); hesapla(); toast('Eşdeğer kod kaydedildi.');
     });
     $('d1').querySelectorAll('[data-sw]').forEach(kaydirmaKur);
+    $('d1').querySelectorAll('[data-dz]').forEach(e => e.addEventListener('click', ev => {
+      if (ev.target.closest('button') || e.dataset.surukle === '1') return;
+      duzeltAc(bul(e.dataset.dz), b.ad);
+    }));
   }
   function tazele() { D.sonuc.bolumler.forEach(b => b.sorun.forEach(s => { s.onayli = !!D.durum.onay[s.id]; })); ciz1(); cizDetay(); }
 
   function kaydirmaKur(f) {
     let x0 = null, y0 = 0, dx = 0, acik = false, yatay = null;
-    f.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; yatay = null; f.style.transition = 'none'; });
+    f.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; yatay = null; f.dataset.surukle = acik ? '1' : '0'; f.style.transition = 'none'; });
     f.addEventListener('pointermove', e => {
       if (x0 === null) return;
-      if (yatay === null && (Math.abs(e.clientX - x0) > 8 || Math.abs(e.clientY - y0) > 8)) { yatay = Math.abs(e.clientX - x0) > Math.abs(e.clientY - y0); if (yatay) f.setPointerCapture(e.pointerId); }
+      if (yatay === null && (Math.abs(e.clientX - x0) > 8 || Math.abs(e.clientY - y0) > 8)) { yatay = Math.abs(e.clientX - x0) > Math.abs(e.clientY - y0); if (yatay) { f.dataset.surukle = '1'; f.setPointerCapture(e.pointerId); } }
       if (!yatay) return;
       dx = Math.min(0, Math.max(-110, e.clientX - x0 + (acik ? -88 : 0)));
       f.style.transform = `translateX(${dx}px)`;
@@ -259,7 +338,7 @@
     const t = tarih();
     sayfaAc(`<div style="font-size:17px;font-weight:600;text-align:center">Gönderilecek dosyalar</div><div class="sm" style="text-align:center;margin:4px 0 16px">Kontrol edip onayla</div>
       <div class="gr"><div class="cl"><span class="xl">${IC.xls}</span><div class="f1" style="font-size:15px">Birlesik_Liste_${t}.xlsx<div class="sm">${B.satirlar.length} satır · ${B.toplam} adet</div></div></div>
-      <div class="cl"><span class="xl">${IC.xls}</span><div class="f1" style="font-size:15px">Duzeltilmis_Siparis_${t}.xlsx<div class="sm">${D.sip.length} satır · düzeltme özelliği sonraki aşamada</div></div></div></div>
+      <div class="cl"><span class="xl">${IC.xls}</span><div class="f1" style="font-size:15px">Duzeltilmis_Siparis_${t}.xlsx<div class="sm">${D.sip.length} satır · ${D.kayit.length} düzeltme</div></div></div></div>
       <button class="pb" id="mailAc">Mail'i aç</button><button class="lb" id="vazgec" style="display:block;width:100%;margin-top:16px">Vazgeç</button>`);
     $('vazgec').onclick = sayfaKapat;
     $('mailAc').onclick = () => {
@@ -274,20 +353,73 @@
   }
 
   // ---------- 3: Ayarlar ----------
+  const AYAR = {
+    bolum: { ad: 'Bölüm listesi', aciklama: 'Fabrikadaki bölümler. Program tanımadığı bir ad görünce sadece bu listeden seçtirir.' },
+    eslesme: { ad: 'Bölüm eşleşmeleri', aciklama: 'Listelerde farklı yazılan bölüm adlarının hangi bölüme sayılacağı. Örnek: MEDE KIDS → MEDE.' },
+    esdeger: { ad: 'Eşdeğer kodlar', aciklama: 'Formda eski kod yazılsa da siparişte yenisiyle geçilen ürünler. Eşleşirse doğru sayılır; siparişte eski kod görülürse uyarılır.' },
+    ogrenilen: { ad: 'Öğrenilmiş kodlar', aciklama: 'Kodu boş yazılan ürünler için onayladığın tahminler. Program bu adları bir dahaki sefere sormadan bu kodla eşleştirir.' }
+  };
+  const sayi = t => t === 'bolum' ? ayar.bolumler.length : Object.keys(t === 'eslesme' ? ayar.eslesmeler : t === 'esdeger' ? ayar.esdeger : ayar.ogrenilen).length;
+  function ayarDegisti() { ayarKaydet(); if (D.sonuc) hesapla(); else { ciz3(); cizAyarDetay(); } }
+
   function ciz3() {
-    const e = Object.entries(ayar.eslesmeler), q = Object.entries(ayar.esdeger), o = Object.entries(ayar.ogrenilen);
-    const grup = (ad, satirlar, bos) => `<div class="sh">${ad}</div><div class="gr">${satirlar.join('') || '<div class="cl sm">' + bos + '</div>'}</div>`;
     T[3].innerHTML = `<div class="lt">Ayarlar</div>
-      ${grup('Bölüm eşleşmeleri (' + e.length + ')', e.map(([k, v]) => `<div class="cl"><span class="f1" style="font-size:15px">${esc(k)}</span><span class="sm">→ ${esc(v)}</span></div>`), 'Yok')}
-      ${grup('Eşdeğer kodlar (' + q.length + ')', q.map(([k, v]) => `<div class="cl"><span class="f1" style="font-size:15px">${esc(k)} → ${esc(v)}</span></div>`), 'Yok')}
-      ${grup('Öğrenilmiş kodlar (' + o.length + ')', o.map(([k, v]) => `<div class="cl"><span class="f1" style="font-size:15px">${esc(k)}</span><span class="sm">${esc(v)}</span></div>`), 'Henüz yok. Kodsuz satır tahminlerini onayladıkça burada birikir.')}
-      ${grup('Bölüm listesi (' + ayar.bolumler.length + ')', ayar.bolumler.map(b => `<div class="cl" style="font-size:15px">${esc(b)}</div>`), '')}
-      <div class="sm" style="margin:12px 16px">Bu listeleri düzenleme ve silme bir sonraki aşamada eklenecek.</div>
-      <div class="gr" style="margin-top:20px"><button class="cl tp" id="sifirla" style="width:100%;color:var(--red);justify-content:center">Öğrenilenleri sıfırla</button></div>
-      <div class="sm" style="text-align:center;margin:20px 0 8px">Sürüm ${SURUM}</div>`;
+      <div class="sha">Listeler</div>
+      <div class="gr">${Object.keys(AYAR).map(t => `<div class="cl tp" data-ay="${t}" style="font-size:18px"><span class="f1">${AYAR[t].ad}</span><span class="sm" style="font-size:16px">${sayi(t)}</span>${IC.chev}</div>`).join('')}</div>
+      <div class="sha">Sıfırlama</div>
+      <div class="gr"><button class="cl tp" id="sifirla" style="width:100%;color:var(--red);justify-content:center;font-size:17px">Başlangıç ayarlarına dön</button></div>
+      <div class="sm" style="margin:8px 16px">Bölüm listesi, eşleşmeler, eşdeğer kodlar ve öğrenilmiş kodlar ilk kurulumdaki haline döner.</div>
+      <div class="sm" style="text-align:center;margin:24px 0 8px">Sürüm ${SURUM}</div>`;
+    T[3].querySelectorAll('[data-ay]').forEach(e => e.onclick = () => { D.ayarSayfa = e.dataset.ay; cizAyarDetay(); ayarIleri(); });
     $('sifirla').onclick = () => {
-      if (!confirm('Eşleşmeler, eşdeğer kodlar ve öğrenilmiş kodlar başlangıç haline dönsün mü?')) return;
-      ayar = SK.varsayilanAyar(); ayarKaydet(); if (D.sonuc) hesapla(); else ciz3(); toast('Ayarlar sıfırlandı.');
+      if (!confirm('Bütün listeler ilk kurulumdaki haline dönsün mü? Eklediğin bölümler ve öğrenilenler silinir.')) return;
+      ayar = SK.varsayilanAyar(); ayarDegisti(); toast('Başlangıç ayarlarına dönüldü.');
+    };
+  }
+
+  function cizAyarDetay() {
+    const t = D.ayarSayfa; if (!t) return;
+    const sil = (etiket, yap) => () => { if (confirm(etiket + ' silinsin mi?')) { yap(); ayarDegisti(); toast('Silindi.'); } };
+    let satirlar = [], ekle = '';
+    if (t === 'bolum') {
+      satirlar = ayar.bolumler.map((b, i) => ({ html: `<span class="f1">${esc(b)}</span>`, sil: sil(b, () => ayar.bolumler.splice(i, 1)) }));
+      ekle = `<div class="cl"><input class="ti" id="y1" style="padding:0" placeholder="Yeni bölüm adı"><button class="lb" id="ekle">Ekle</button></div>`;
+    } else if (t === 'eslesme') {
+      satirlar = Object.entries(ayar.eslesmeler).map(([k, v]) => ({ html: `<div class="f1">${esc(k || '(boş)')}<div class="sm">→ ${esc(v)}</div></div>`, sil: sil(k, () => delete ayar.eslesmeler[k]) }));
+      ekle = `<div class="cl" style="flex-wrap:wrap;gap:8px"><label class="fi" style="flex-basis:100%">Listede yazan<input id="y1" placeholder="MEDE KIDS"></label>
+        <label class="fi" style="flex:1">Sayılacağı bölüm<select id="y2" style="height:36px;border:.5px solid var(--sep);border-radius:8px;background:var(--bg);color:var(--t1);font:inherit;font-size:16px;padding:0 8px">${ayar.bolumler.map(b => `<option>${esc(b)}</option>`).join('')}</select></label>
+        <button class="lb" id="ekle" style="align-self:flex-end;padding-bottom:8px">Ekle</button></div>`;
+    } else if (t === 'esdeger') {
+      satirlar = Object.entries(ayar.esdeger).map(([k, v]) => ({ html: `<span class="f1">${esc(k)} → ${esc(v)}</span>`, sil: sil(k + ' → ' + v, () => delete ayar.esdeger[k]) }));
+      ekle = `<div class="cl" style="gap:8px"><label class="fi" style="flex:1">Formdaki kod<input id="y1" inputmode="numeric" placeholder="152958"></label><label class="fi" style="flex:1">Siparişteki kod<input id="y2" inputmode="numeric" placeholder="179920"></label><button class="lb" id="ekle" style="align-self:flex-end;padding-bottom:8px">Ekle</button></div>`;
+    } else {
+      satirlar = Object.entries(ayar.ogrenilen).map(([k, v]) => ({ html: `<div class="f1">${esc(k)}<div class="sm">→ ${esc(v)}</div></div>`, sil: sil(k, () => delete ayar.ogrenilen[k]) }));
+    }
+    $('d3').innerHTML = `<div class="nb"><button class="bk" id="ayGeri"><span style="font-size:28px;line-height:20px">&#x2039;</span>Ayarlar</button>${AYAR[t].ad}</div>
+      <div class="sm" style="margin:8px 4px 0">${AYAR[t].aciklama}</div>
+      ${ekle ? '<div class="sha">Yeni ekle</div><div class="gr">' + ekle + '</div>' : ''}
+      <div class="sha">${AYAR[t].ad} (${satirlar.length})</div>
+      <div class="gr">${satirlar.map((s, i) => `<div class="cl" style="font-size:16px">${s.html}<button class="sil" data-s="${i}">Sil</button></div>`).join('') || '<div class="cl sm">Henüz yok.</div>'}</div>`;
+    $('ayGeri').onclick = () => { ayarGeri(); ciz3(); };
+    $('d3').querySelectorAll('[data-s]').forEach(e => e.onclick = satirlar[+e.dataset.s].sil);
+    if (!$('ekle')) return;
+    $('ekle').onclick = () => {
+      const a = $('y1').value.trim(), b = $('y2') ? $('y2').value.trim() : '';
+      if (t === 'bolum') {
+        const ad = a.toLocaleUpperCase('tr-TR');
+        if (!ad) return toast('Önce bölüm adını yaz.');
+        if (ayar.bolumler.some(x => SK.sik(x) === SK.sik(ad))) return toast('Bu bölüm zaten listede.');
+        ayar.bolumler.push(ad);
+      } else if (t === 'eslesme') {
+        if (!a) return toast('Önce listede yazan adı gir.');
+        ayar.eslesmeler[a.toLocaleUpperCase('tr-TR')] = b;
+      } else {
+        const k1 = a.replace(/\D/g, ''), k2 = b.replace(/\D/g, '');
+        if (!k1 || !k2) return toast('İki kodu da rakamla gir.');
+        if (k1 === k2) return toast('İki kod aynı olamaz.');
+        ayar.esdeger[k1] = k2;
+      }
+      ayarDegisti(); toast('Eklendi.');
     };
   }
 

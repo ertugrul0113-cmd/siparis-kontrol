@@ -30,6 +30,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .nb{position:sticky;top:0;display:flex;align-items:center;justify-content:center;height:44px;font-weight:600;margin:0 -16px;background:var(--bg);z-index:3}
 .bk{position:absolute;left:8px;color:var(--blue);display:flex;align-items:center;gap:2px;font-weight:400}
 .sh{font-size:13px;color:var(--t2);margin:22px 16px 7px;text-transform:none}
+.shk{font-size:21px;font-weight:700;color:var(--red);margin:26px 4px 9px}
+.sha{font-size:16px;font-weight:600;color:var(--t2);margin:26px 16px 8px}
+.sil{color:var(--red);font-size:15px}
+.fi{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--t2)}
+.fi input{width:100%;height:36px;border:.5px solid var(--sep);border-radius:8px;background:var(--bg);color:var(--t1);font:inherit;font-size:16px;padding:0 10px;outline:none}
+.fi input:focus{border-color:var(--blue)}
+.qa{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.qa button{background:var(--bB);color:var(--bT);border-radius:16px;padding:7px 12px;font-size:14px;font-weight:500}
+.ust{text-decoration:line-through;opacity:.5}
 .gr{background:var(--cell);border-radius:10px;overflow:hidden}
 .cl{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:44px;position:relative;background:var(--cell)}
 .gr>*+*:before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep);z-index:2}
@@ -77,6 +86,7 @@ input[type=file]{display:none}
   <div class="scr pr" id="d1"></div>
   <div class="scr off" id="t2"></div>
   <div class="scr off" id="t3"></div>
+  <div class="scr pr" id="d3"></div>
 </div>
 <nav class="tb" id="tb">
   <button data-i="0" class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9.5 13.5 12 11l2.5 2.5"/></svg>İstek form / liste</button>

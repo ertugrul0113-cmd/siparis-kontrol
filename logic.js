@@ -169,15 +169,16 @@
     const es = ayar.esdeger, eskiKodlar = new Set(Object.keys(es));
     const ortak = k => es[k] || k;
 
+    // ref: düzeltme ekranının asıl satırı bulabilmesi için [form sırası, kalem sırası] / sipariş satır sırası.
     const F = [];
-    for (const f of formlar) {
+    formlar.forEach((f, fi) => {
       const dolu = f.kalemler.find(k => k.bolumHam);
-      for (const k of f.kalemler) {
+      f.kalemler.forEach((k, ki) => {
         const b = dolu ? bolumCoz(k.bolumHam || dolu.bolumHam, ayar) : bolumCoz(cevaplar.form[f.no], ayar);
-        F.push(Object.assign({}, k, { bolum: b, form: f.no }));
-      }
-    }
-    const S = siparis.map(k => Object.assign({}, k, { bolum: bolumCoz(k.bolumHam, ayar) }));
+        F.push(Object.assign({}, k, { bolum: b, form: f.no, ref: [fi, ki] }));
+      });
+    });
+    const S = siparis.map((k, i) => Object.assign({}, k, { bolum: bolumCoz(k.bolumHam, ayar), ref: i }));
 
     const bolumAdlari = [...new Set([...F, ...S].map(x => x.bolum).filter(Boolean))];
     const bolumler = [];
@@ -188,7 +189,7 @@
       const ekle = o => { o.id = b + '|' + o.tip + '|' + (o.kod || o.ad) + '|' + (o.kod2 || ''); o.onayli = !!durum.onay[o.id]; sorun.push(o); };
 
       if (!fb.length) {
-        bolumler.push({ ad: b, formYok: true, sorun: [{ tip: 'FORMYOK', id: b + '|FORMYOK', not: sb.length + ' kalem siparişte var' }], dogru: [], siparis: sb });
+        bolumler.push({ ad: b, formYok: true, sorun: [{ tip: 'FORMYOK', id: b + '|FORMYOK', not: sb.length + ' kalem siparişte var', sRef: sb.map(x => x.ref) }], dogru: [], siparis: sb });
         continue;
       }
 
@@ -205,26 +206,26 @@
           const p = benzerlik(x.ad, h.ad); if (p > puan) { puan = p; en = h; }
         }
         if (en && puan >= 0.6) { x.kod = en.kod; x.tahmin = en; formKodlari.add(ortak(en.kod)); }
-        else ekle({ tip: 'KODSUZ', ad: x.ad, form: x.miktar, fBirim: x.birimHam });
+        else ekle({ tip: 'KODSUZ', ad: x.ad, form: x.miktar, fBirim: x.birimHam, fRef: [x.ref] });
       }
 
       // Aynı bölüm formunda aynı kod birden fazla satırda.
       const say = {};
       fb.filter(x => x.kod).forEach(x => { (say[x.kod] = say[x.kod] || []).push(x); });
-      for (const k in say) if (say[k].length > 1) ekle({ tip: 'CAKISMA', kod: k, ad: say[k].map(x => x.ad).join(' / '), not: say[k].length + ' satırda yazılmış' });
+      for (const k in say) if (say[k].length > 1) ekle({ tip: 'CAKISMA', kod: k, ad: say[k].map(x => x.ad).join(' / '), not: say[k].length + ' satırda yazılmış', fRef: say[k].map(x => x.ref) });
 
       // Tahminler onaya sunulur.
-      fb.filter(x => x.tahmin).forEach(x => ekle({ tip: 'TAHMIN', kod: x.tahmin.kod, ad: x.ad, not: '"' + x.tahmin.ad.trim() + '" (' + x.tahmin.kaynak + ') ile eşleşti', anahtarAd: sik(x.ad) }));
+      fb.filter(x => x.tahmin).forEach(x => ekle({ tip: 'TAHMIN', kod: x.tahmin.kod, ad: x.ad, not: '"' + x.tahmin.ad.trim() + '" (' + x.tahmin.kaynak + ') ile eşleşti', anahtarAd: sik(x.ad), fRef: [x.ref] }));
 
       // Siparişte eşdeğeri olan eski kod.
-      sb.filter(x => eskiKodlar.has(x.kod)).forEach(x => ekle({ tip: 'ESKIKOD', kod: x.kod, kod2: es[x.kod], ad: x.ad, not: es[x.kod] + ' olarak geçilmeliydi' }));
+      sb.filter(x => eskiKodlar.has(x.kod)).forEach(x => ekle({ tip: 'ESKIKOD', kod: x.kod, kod2: es[x.kod], ad: x.ad, not: es[x.kod] + ' olarak geçilmeliydi', sRef: [x.ref] }));
 
       const G = new Map();
       const topla = (x, taraf) => {
         if (!x.kod) return;
         const k = ortak(x.kod);
-        const g = G.get(k) || { kod: k, fKod: new Set(), sKod: new Set(), f: 0, s: 0, fB: new Set(), sB: new Set(), fAd: '', sAd: '', var: { f: false, s: false } };
-        g[taraf] += x.miktar; g.var[taraf] = true;
+        const g = G.get(k) || { kod: k, fKod: new Set(), sKod: new Set(), f: 0, s: 0, fB: new Set(), sB: new Set(), fAd: '', sAd: '', var: { f: false, s: false }, fRef: [], sRef: [] };
+        g[taraf] += x.miktar; g.var[taraf] = true; g[taraf + 'Ref'].push(x.ref);
         g[taraf + 'Kod'].add(x.kod); g[taraf + 'B'].add(x.birim);
         if (!g[taraf + 'Ad']) g[taraf + 'Ad'] = x.ad;
         G.set(k, g);
@@ -236,12 +237,13 @@
         const fk = [...g.fKod].join('/'), sk = [...g.sKod].join('/');
         const esd = g.var.f && g.var.s && fk !== sk ? fk + ' ≡ ' + sk : '';
         const ad = g.sAd || g.fAd;
-        if (g.var.f && !g.var.s) eksik.push({ tip: 'EKSIK', kod: fk, ad: g.fAd, form: g.f, fBirim: [...g.fB].join('/') });
-        else if (!g.var.f && g.var.s) fazla.push({ tip: 'FAZLA', kod: sk, ad: g.sAd, siparis: g.s, sBirim: [...g.sB].join('/') });
-        else if (g.f === g.s) dogru.push({ kod: sk, ad, miktar: g.s, birim: [...g.sB].join('/'), not: esd ? 'Eşdeğer kod: ' + esd : '' });
+        const ref = { fRef: g.fRef, sRef: g.sRef };
+        if (g.var.f && !g.var.s) eksik.push(Object.assign({ tip: 'EKSIK', kod: fk, ad: g.fAd, form: g.f, fBirim: [...g.fB].join('/') }, ref));
+        else if (!g.var.f && g.var.s) fazla.push(Object.assign({ tip: 'FAZLA', kod: sk, ad: g.sAd, siparis: g.s, sBirim: [...g.sB].join('/') }, ref));
+        else if (g.f === g.s) dogru.push(Object.assign({ kod: sk, ad, miktar: g.s, birim: [...g.sB].join('/'), not: esd ? 'Eşdeğer kod: ' + esd : '' }, ref));
         else {
           const birimFarkli = [...g.fB].join() !== [...g.sB].join();
-          ekle({ tip: birimFarkli ? 'BIRIM' : 'ADET', kod: sk, ad, form: g.f, siparis: g.s, fBirim: [...g.fB].join('/'), sBirim: [...g.sB].join('/'), not: esd ? 'Eşdeğer kod: ' + esd : '' });
+          ekle(Object.assign({ tip: birimFarkli ? 'BIRIM' : 'ADET', kod: sk, ad, form: g.f, siparis: g.s, fBirim: [...g.fB].join('/'), sBirim: [...g.sB].join('/'), not: esd ? 'Eşdeğer kod: ' + esd : '' }, ref));
         }
       }
       // Aynı adetli bir eksik ve bir fazla: muhtemel kod hatası.
@@ -250,7 +252,7 @@
         if (i < 0) continue;
         const z = fazla.splice(i, 1)[0];
         eksik.splice(eksik.indexOf(e), 1);
-        ekle({ tip: 'KODHATA', kod: e.kod, kod2: z.kod, ad: e.ad, ad2: z.ad, form: e.form, siparis: z.siparis });
+        ekle({ tip: 'KODHATA', kod: e.kod, kod2: z.kod, ad: e.ad, ad2: z.ad, form: e.form, siparis: z.siparis, fRef: e.fRef, sRef: z.sRef });
       }
       eksik.forEach(ekle); fazla.forEach(ekle);
       bolumler.push({ ad: b, sorun, dogru });
