@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const SURUM = '0.3 · 10.11.2026';
+  const SURUM = '0.4 · 10.11.2026';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const IC = {
@@ -49,7 +49,8 @@
   // ---------- Excel okuma ----------
   function tabloOku(dosya) {
     return dosya.arrayBuffer().then(buf => {
-      const wb = XLSX.read(buf, { type: 'array' });
+      const csv = /.csv$/i.test(dosya.name) ? SK.csvMetni(buf) : null;
+      const wb = csv != null ? XLSX.read(csv, { type: 'string' }) : XLSX.read(buf, { type: 'array' });
       let satirlar = [];
       wb.SheetNames.forEach(n => { satirlar = satirlar.concat(XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: true })); satirlar.push([]); });
       return satirlar;

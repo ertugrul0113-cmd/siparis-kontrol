@@ -14,13 +14,14 @@ Malzeme istek formları (bölümlerin istekleri) ile satınalmaya geçilen sipar
 - **İstek formları:** Tek Excel, formlar aynı sayfada alt alta; her formun kendi başlığı ve imza kısmı var. Form, "Malzeme Numarası/JD ADVERS" + "Miktar" başlık satırıyla başlar, "Talebi Yapanın" satırıyla biter. Başlık iki satıra bölünmüş olabilir.
 - **Kod** JD ADVERS ya da LEO sütununda olabilir; ikisi de geçerli, hata değil. İkisi doluysa JD esas.
 - **Sipariş listesi:** Sistemden alınan Excel: Mlz No. | Malzeme Tanımı 1 | Malzeme Tanımı 2 | Sipariş Miktarı | İşlem Ö.B. (birim) | Açıklama 1 (bölüm).
+- CSV de okunur (0.4): harfler önce UTF-8, olmazsa Türkçe Windows (1254) olarak çözülür. Asıl yol yine .xlsx.
 - İkisi de yüklenince rapor kendiliğinden açılır (Karşılaştır düğmesi yok).
 - Fotoğrafla okuma **yedek yoldur** (0.3'te eklendi): Tesseract telefonun içinde çalışır (`foto.js` + `vendor/tesseract`), fotoğraf dışarı gönderilmez. Görüntü temizlenir (gölge, tablo çizgileri, kenar lekeleri), eğim düzeltilir, satır satır okunur. Okunanlar kontrol ekranında düzenlenip onaylanmadan kullanılmaz.
 - Fotoğraf test sonuçları (10.11.2026, kullanıcının fotoğrafları): düz sipariş listesi 31 satırın 29'u, kodların çoğu doğru; Yemekhane formu 13 satırın 12'si, kodların yarısı okunamadı; gölgeli İç Alan formu hiç okunamadı. Şüpheli işaretlenmeyen satırlarda da hata olabiliyor. Kullanıcıya açıkça söylendi: Excel asıl yol, fotoğraf elle düzeltme gerektirir. Daha iyi okuma çevrimiçi servis ister, bu da "veri telefonda kalır" kuralına aykırı; kullanıcıya sormadan yapma.
 
 ## Bölümler
 - Sabit liste (30): MEDE, LOKAL, BOYAHANE İDARİ BİNA, İDARİ BİNA, YEMEKHANE, İÇ ALAN, TEST LAB, İPLİK LAB, BOYA LAB, SERA, ENERJİ, KOJEN, TEKİRDAĞ ENERJİ, SEVKİYAT, ARITMA, DOKUMA, BÜKÜM, GÜVENLİK, REVİR, HAM KONTROL, MAMÜL KONTROL, BOYAHANE, YARDIMCI İŞLETMELER, ÜRGE, SATINALMA, KARTELA, SERA YEMEKHANESİ, MUHASEBE, İDARİ BİNA SEKRETER, KONUT. Kullanıcı uygulamadan yeni bölüm ekleyebilir.
-- Adlar **tahminle eşleştirilmez**. Sadece büyük-küçük harf, boşluk, nokta, tire farkı yok sayılır (TEKİRDAĞ-ENERJİ = TEKİRDAĞ ENERJİ, ÜR-GE = ÜRGE).
+- Adlar **tahminle eşleştirilmez**. Sadece büyük-küçük harf, boşluk, nokta, tire farkı ve (0.4'ten beri, kullanıcı onayıyla) Türkçe harf farkı yok sayılır (TEKİRDAĞ-ENERJİ = TEKİRDAĞ ENERJİ, ÜR-GE = ÜRGE, IDARI BINA = İDARİ BİNA, GUVENLIK = GÜVENLİK). Aynı kural sütun başlıkları (MIKTAR = MİKTAR), birimler ve kodsuz satırların ad benzerliği için de geçerli.
 - Benzer ama **ayrı** bölümler: Boyahane / Boyahane İdari Bina, İdari Bina / İdari Bina Sekreter, Sera / Sera Yemekhanesi, Enerji / Tekirdağ Enerji.
 - Onaylanmış eşleşmeler: MEDE KIDS→MEDE, Enerji Şefliği→KOJEN, Enerji Üretim→ENERJİ, BOYA&APRE MDR./BOYA LAB.ŞEFLİĞİ→BOYA LAB, KUMAŞ TEST LAB/KGM→TEST LAB, İPLİK TEST LAB/KGM→İPLİK LAB, H.K.K ve HAM KON→HAM KONTROL, MUH.→MUHASEBE.
 - Tanınmayan ad → kullanıcıya listeden seçtirilir, cevap hatırlanır. Formun bölüm sütunu tamamen boşsa → o form için sorulur (❓ uyarısıyla).

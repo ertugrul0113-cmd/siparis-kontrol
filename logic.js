@@ -24,13 +24,15 @@
 
   const BIRIM = {
     AD: 'AD', ADET: 'AD', ADT: 'AD', PK: 'PK', PKT: 'PK', PAKET: 'PK', PAK: 'PK',
-    TP: 'TP', TOP: 'TP', CF: 'CF', 'ÇF': 'CF', 'ÇİFT': 'CF', CIFT: 'CF',
-    KOLİ: 'KOLİ', KOLI: 'KOLİ', KL: 'KOLİ', KU: 'KU', KUTU: 'KU', KG: 'KG', BD: 'BD', LT: 'LT'
+    TP: 'TP', TOP: 'TP', CF: 'CF', CIFT: 'CF',
+    KOLI: 'KOLİ', KL: 'KOLİ', KU: 'KU', KUTU: 'KU', KG: 'KG', BD: 'BD', LT: 'LT'
   };
 
   const up = s => String(s == null ? '' : s).toLocaleUpperCase('tr-TR').trim();
-  const sik = s => up(s).replace(/[^A-ZÇĞİÖŞÜ0-9+]/g, '');
-  const birim = s => { const u = up(s).replace(/[^A-ZÇĞİÖŞÜ]/g, ''); return BIRIM[u] || u; };
+  // Türkçe harfler karşılaştırmada düz harf sayılır (İ=I, Ş=S, Ğ=G, Ü=U, Ö=O, Ç=C): İngilizce klavyeyle yazılmış "IDARI BINA" = "İDARİ BİNA".
+  const duz = s => up(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const sik = s => duz(s).replace(/[^A-Z0-9+]/g, '');
+  const birim = s => { const u = duz(s).replace(/[^A-Z]/g, ''); return BIRIM[u] || u; };
 
   function kod(v) {
     const s = String(v == null ? '' : v).trim().replace(/\.0+$/, '');
@@ -52,7 +54,7 @@
   // ---------- İstek formları ----------
   function basliktaMi(satir) {
     const t = satir.map(sik).join('|');
-    return t.includes('MİKTAR') && (t.includes('MALZEMENUMARASI') || t.includes('JDADVERS'));
+    return t.includes('MIKTAR') && (t.includes('MALZEMENUMARASI') || t.includes('JDADVERS'));
   }
   function sutunBul(a, b) {
     const s = {};
@@ -62,10 +64,10 @@
       if (s.jd == null && (t.includes('JDADVERS') || (t.includes('MALZEMENUMARASI') && !t.includes('LEO')))) s.jd = i;
       else if (s.leo == null && t.includes('LEO')) s.leo = i;
       else if (s.ad == null && t.includes('TANIM')) s.ad = i;
-      else if (s.birim == null && t.includes('BİRİM')) s.birim = i;
-      else if (s.miktar == null && t.includes('MİKTAR')) s.miktar = i;
-      else if (s.bolum == null && t.includes('BÖLÜM')) s.bolum = i;
-      else if (s.aciklama == null && t.includes('AÇIKLAMA')) s.aciklama = i;
+      else if (s.birim == null && t.includes('BIRIM')) s.birim = i;
+      else if (s.miktar == null && t.includes('MIKTAR')) s.miktar = i;
+      else if (s.bolum == null && t.includes('BOLUM')) s.bolum = i;
+      else if (s.aciklama == null && t.includes('ACIKLAMA')) s.aciklama = i;
     }
     return s;
   }
@@ -86,7 +88,7 @@
         continue;
       }
       if (!f) continue;
-      if (metin.includes('TALEBİYAPAN') || metin.includes('MALZEMEİSTEKFORMU')) { f = null; continue; }
+      if (metin.includes('TALEBIYAPAN') || metin.includes('MALZEMEISTEKFORMU')) { f = null; continue; }
       const al = i => (i == null ? '' : row[i]);
       const ad = String(al(s.ad) || '').trim();
       const m = sayi(al(s.miktar));
@@ -112,9 +114,9 @@
           if (x.startsWith('MLZNO')) s.kod = i;
           else if (x.includes('TANIMI1')) s.ad1 = i;
           else if (x.includes('TANIMI2')) s.ad2 = i;
-          else if (x.includes('SİPARİŞ')) s.miktar = i;
-          else if (x.includes('İŞLEM') || x === 'ÖB') s.birim = i;
-          else if (x.includes('AÇIKLAMA') && s.bolum == null) s.bolum = i;
+          else if (x.includes('SIPARIS')) s.miktar = i;
+          else if (x.includes('ISLEM') || x === 'OB') s.birim = i;
+          else if (x.includes('ACIKLAMA') && s.bolum == null) s.bolum = i;
         });
         continue;
       }
@@ -157,7 +159,7 @@
     B.forEach(v => { nb += v; });
     if (!(na + nb)) return 0;
     // Ana kelime (ör. marka) ortak değilse benzer sayma: "Pril deterjanı" ile "Fairy deterjanı" eşleşmesin.
-    const kel = s => up(s).split(/[^A-ZÇĞİÖŞÜ0-9]+/).filter(w => w.length >= 3);
+    const kel = s => duz(s).split(/[^A-Z0-9]+/).filter(w => w.length >= 3);
     const ka = kel(a), kb = kel(b);
     if (!ka.length || !kb.length || !(kb.includes(ka[0]) || ka.includes(kb[0]))) return 0;
     return (2 * o) / (na + nb);
@@ -196,7 +198,7 @@
       // Kodsuz satırlar: önce öğrenilmiş adlar, sonra benzerlik tahmini.
       const formKodlari = new Set(fb.filter(x => x.kod).map(x => ortak(x.kod)));
       for (const x of fb.filter(x => !x.kod)) {
-        const og = ayar.ogrenilen[sik(x.ad)];
+        const og = ayar.ogrenilen[sik(x.ad)] || (Object.entries(ayar.ogrenilen).find(e => sik(e[0]) === sik(x.ad)) || [])[1];
         if (og) { x.kod = og; x.ogrenildi = true; continue; }
         let en = null, puan = 0;
         const havuz = sb.filter(s => !formKodlari.has(ortak(s.kod))).map(s => ({ kod: s.kod, ad: s.ad + ' ' + s.ad2, kaynak: 'sipariş' }))
@@ -277,8 +279,15 @@
     return { satirlar, kaynakSatir: siparis.length, toplam, kontrol: satirlar.reduce((t, x) => t + x.toplam, 0) };
   }
 
+  // CSV dosyasının harflerini çözer: önce UTF-8, olmazsa Türkçe Windows (1254). UTF-16 ise dokunmaz (null).
+  function csvMetni(buf) {
+    const b = new Uint8Array(buf);
+    if ((b[0] === 0xFF && b[1] === 0xFE) || (b[0] === 0xFE && b[1] === 0xFF)) return null;
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1254').decode(b); }
+  }
+
   const varsayilanAyar = () => ({ bolumler: BOLUMLER.slice(), eslesmeler: Object.assign({}, ESLESMELER), esdeger: Object.assign({}, ESDEGER), ogrenilen: {} });
 
-  const SK = { formlariOku, siparisOku, sorular, karsilastir, birlestir, bolumCoz, varsayilanAyar, benzerlik, sik, birim };
+  const SK = { formlariOku, siparisOku, sorular, karsilastir, birlestir, bolumCoz, varsayilanAyar, csvMetni, benzerlik, sik, birim };
   if (typeof module !== 'undefined' && module.exports) module.exports = SK; else root.SK = SK;
 })(typeof window !== 'undefined' ? window : globalThis);
