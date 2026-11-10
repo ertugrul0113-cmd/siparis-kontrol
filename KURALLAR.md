@@ -15,7 +15,8 @@ Malzeme istek formları (bölümlerin istekleri) ile satınalmaya geçilen sipar
 - **Kod** JD ADVERS ya da LEO sütununda olabilir; ikisi de geçerli, hata değil. İkisi doluysa JD esas.
 - **Sipariş listesi:** Sistemden alınan Excel: Mlz No. | Malzeme Tanımı 1 | Malzeme Tanımı 2 | Sipariş Miktarı | İşlem Ö.B. (birim) | Açıklama 1 (bölüm).
 - İkisi de yüklenince rapor kendiliğinden açılır (Karşılaştır düğmesi yok).
-- Fotoğrafla okuma da olacak (yedek yol), okunanlar kaydetmeden önce kontrol ekranında gösterilecek. **Henüz yapılmadı.**
+- Fotoğrafla okuma **yedek yoldur** (0.3'te eklendi): Tesseract telefonun içinde çalışır (`foto.js` + `vendor/tesseract`), fotoğraf dışarı gönderilmez. Görüntü temizlenir (gölge, tablo çizgileri, kenar lekeleri), eğim düzeltilir, satır satır okunur. Okunanlar kontrol ekranında düzenlenip onaylanmadan kullanılmaz.
+- Fotoğraf test sonuçları (10.11.2026, kullanıcının fotoğrafları): düz sipariş listesi 31 satırın 29'u, kodların çoğu doğru; Yemekhane formu 13 satırın 12'si, kodların yarısı okunamadı; gölgeli İç Alan formu hiç okunamadı. Şüpheli işaretlenmeyen satırlarda da hata olabiliyor. Kullanıcıya açıkça söylendi: Excel asıl yol, fotoğraf elle düzeltme gerektirir. Daha iyi okuma çevrimiçi servis ister, bu da "veri telefonda kalır" kuralına aykırı; kullanıcıya sormadan yapma.
 
 ## Bölümler
 - Sabit liste (30): MEDE, LOKAL, BOYAHANE İDARİ BİNA, İDARİ BİNA, YEMEKHANE, İÇ ALAN, TEST LAB, İPLİK LAB, BOYA LAB, SERA, ENERJİ, KOJEN, TEKİRDAĞ ENERJİ, SEVKİYAT, ARITMA, DOKUMA, BÜKÜM, GÜVENLİK, REVİR, HAM KONTROL, MAMÜL KONTROL, BOYAHANE, YARDIMCI İŞLETMELER, ÜRGE, SATINALMA, KARTELA, SERA YEMEKHANESİ, MUHASEBE, İDARİ BİNA SEKRETER, KONUT. Kullanıcı uygulamadan yeni bölüm ekleyebilir.
@@ -51,7 +52,9 @@ Malzeme istek formları (bölümlerin istekleri) ile satınalmaya geçilen sipar
 - Seçici: Sorunlu / Onaylanan / Tümü, her birinin yanında sayı.
 - Rapor sekmesinde sorunlu bölüm sayısı kırmızı rozet.
 - Bölüme dokununca detay sağdan gelir; adet/birim farkı satırları sola kaydırılarak ya da "Doğru" düğmesiyle onaylanır.
-- Hatalar uygulama içinde düzeltilecek, sonuç anında yeniden hesaplanacak, düzeltme kaydı ekranda görünecek. **Düzeltme henüz yapılmadı.**
+- Hata satırına dokununca düzeltme penceresi açılır: hızlı düzeltmeler (siparişe ekle, siparişten çıkar, kodu düzelt, adedi forma eşitle) ve elle kod/adet düzenleme. Sonuç anında yeniden hesaplanır; düzeltmeler Rapor'un üstünde listelenir, "Son düzeltmeyi geri al" var. Sipariş düzeltmeleri gönderilen Düzeltilmiş Sipariş Excel'ine yansır; form düzeltmeleri sadece o karşılaştırmada geçerli.
+- Ayarlar: Bölüm listesi, bölüm eşleşmeleri, eşdeğer kodlar, öğrenilmiş kodlar ayrı sayfalarda; ekleme ve silme var; "Başlangıç ayarlarına dön".
+- Ana sayfada "İstek formları" / "Sipariş listesi" başlıkları büyük ve kırmızı; Ayarlar başlıkları büyük.
 
 ## Birleşik liste
 - Sipariş listesindeki aynı kodlar bölüme bakılmadan toplanır. Sütunlar: Kod | Ürün adı | Toplam adet.
@@ -73,7 +76,5 @@ Kullanıcının 10.11.2026 tarihli 28 fotoğrafından aktarılan veriyle beklene
 
 ## Yapılacaklar
 1. Gerçek Excel dosyalarıyla deneme (kullanıcı iş bilgisayarından telefona atıp deneyecek).
-2. Uygulama içinde düzeltme + düzeltme kaydı + düzeltilmiş sipariş Excel'i.
-3. Ayarlardaki listeleri düzenleme/silme.
-4. Fotoğraftan okuma + kontrol ekranı.
-5. DOKU formu kararı.
+2. DOKU formu kararı.
+3. Fotoğrafın kalıp kalmayacağı / nasıl iyileştirileceği: kullanıcının kararı bekleniyor.

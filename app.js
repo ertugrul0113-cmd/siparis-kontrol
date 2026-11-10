@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const SURUM = '0.2 · 10.11.2026';
+  const SURUM = '0.3 · 10.11.2026';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const IC = {
@@ -120,7 +120,7 @@
     return `<div class="shk">${baslik}</div><div class="gr">
       ${yuk ? '<div class="cl"><span class="sp"></span><span class="f1">Okunuyor…</span></div>' : dosya ? `<div class="cl"><span style="color:var(--green)">${IC.check}</span><div class="f1">${esc(dosya)}<div class="sm">${bilgi}</div></div></div>` : ''}
       <div class="cl tp xl" data-f="${tur}">${IC.table}<span class="f1">Excel seç</span>${IC.chev}</div>
-      <div class="cl tp ft" data-foto="1">${IC.cam}<span class="f1">Fotoğraf çek</span>${IC.chev}</div></div>`;
+      <div class="cl tp ft" data-foto="${tur}">${IC.cam}<span class="f1">Fotoğraf çek</span>${IC.chev}</div></div>`;
   }
   function ciz0() {
     const fs = D.form ? D.form.length + ' form · ' + D.form.reduce((t, f) => t + f.kalemler.length, 0) + ' satır' : '';
@@ -129,8 +129,139 @@
       ${yuklemeGrubu('Sipariş listesi', 'sip', D.sipDosya, D.sip ? D.sip.length + ' satır' : '')}
       <div class="sm" style="text-align:center;margin-top:18px">${D.form && D.sip ? (bekleyenSoru() ? '<button class="lb" id="soruAc">Bekleyen bölüm sorusunu cevapla</button>' : 'Karşılaştırma hazır, Rapor sekmesine bakabilirsin') : 'İkisi de yüklenince rapor kendiliğinden açılır'}</div>`;
     T[0].querySelectorAll('[data-f]').forEach(e => e.onclick = () => $(e.dataset.f === 'form' ? 'fForm' : 'fSip').click());
-    T[0].querySelectorAll('[data-foto]').forEach(e => e.onclick = () => toast('Fotoğraftan okuma bir sonraki aşamada eklenecek.'));
+    T[0].querySelectorAll('[data-foto]').forEach(e => e.onclick = () => $(e.dataset.foto === 'form' ? 'pForm' : 'pSip').click());
     if ($('soruAc')) $('soruAc').onclick = baslat;
+  }
+
+  // ---------- Fotoğraftan okuma ----------
+  // Okuma telefonun içinde yapılır (Tesseract). Motor dosyaları ilk kullanımda indirilir, sonra internetsiz çalışır.
+  let okuyucu = null;
+  const tam = p => new URL(p, location.href).href;
+  function scriptYukle(src) {
+    return new Promise((ok, hata) => {
+      if (window.Tesseract) return ok();
+      const s = document.createElement('script'); s.src = src; s.onload = ok;
+      s.onerror = () => hata(new Error('Okuma motoru yüklenemedi. İlk kullanımda internet gerekir.'));
+      document.head.appendChild(s);
+    });
+  }
+  async function okuyucuHazirla() {
+    if (okuyucu) return okuyucu;
+    await scriptYukle('vendor/tesseract/tesseract.min.js');
+    okuyucu = await Tesseract.createWorker('tur', 1, { workerPath: tam('vendor/tesseract/worker.min.js'), corePath: tam('vendor/tesseract/'), langPath: tam('vendor/tesseract/lang'), gzip: true, workerBlobURL: false });
+    await okuyucu.setParameters({ tessedit_pageseg_mode: '7', preserve_interword_spaces: '1' });
+    return okuyucu;
+  }
+  const bekle = ms => new Promise(r => setTimeout(r, ms));
+  function ilerleme(baslik, alt, oran) {
+    if (!$('ilBas')) sayfaAc(`<div style="font-size:17px;font-weight:600;text-align:center" id="ilBas"></div><div class="ilerleme"><div id="ilCubuk" style="width:0"></div></div><div class="sm" style="text-align:center" id="ilAlt"></div><div class="sm" style="text-align:center;margin-top:14px">Okuma telefonun içinde yapılıyor, fotoğraf hiçbir yere gönderilmiyor.</div>`);
+    $('ilBas').textContent = baslik; $('ilAlt').textContent = alt; $('ilCubuk').style.width = Math.round(oran * 100) + '%';
+  }
+
+  // Bölüm adını okunan metnin başından bulmaya çalışır ("YEMEKHANE DA" → YEMEKHANE). Kesin değilse ham bırakır.
+  function dice(a, b) {
+    a = SK.sik(a); b = SK.sik(b); if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+    const m = new Map(); for (let i = 0; i < a.length - 1; i++) { const k = a.substr(i, 2); m.set(k, (m.get(k) || 0) + 1); }
+    let o = 0; for (let i = 0; i < b.length - 1; i++) { const k = b.substr(i, 2); if (m.get(k) > 0) { o++; m.set(k, m.get(k) - 1); } }
+    return 2 * o / (a.length + b.length - 2);
+  }
+  function bolumYakala(ham) {
+    const p = String(ham || '').split(/\s+/).filter(Boolean);
+    for (let k = Math.min(4, p.length); k >= 1; k--) { const c = p.slice(0, k).join(' '); if (SK.bolumCoz(c, ayar)) return { bolum: c, kesin: true }; }
+    const adaylar = ayar.bolumler.concat(Object.keys(ayar.eslesmeler));
+    let en = null, puan = 0;
+    for (let k = 1; k <= Math.min(4, p.length); k++) {
+      const c = p.slice(0, k).join(' ');
+      for (const a of adaylar) { const s = dice(c, a); if (s > puan) { puan = s; en = a; } }
+    }
+    return puan >= 0.7 ? { bolum: en, kesin: false } : { bolum: ham || '', kesin: false };
+  }
+
+  $('pForm').onchange = e => fotoAl(e.target, 'form');
+  $('pSip').onchange = e => fotoAl(e.target, 'sip');
+  async function fotoAl(inp, tur) {
+    const dosyalar = [...inp.files]; inp.value = '';
+    if (!dosyalar.length) return;
+    const tumu = [], resimler = [];
+    try {
+      ilerleme('Okuma motoru hazırlanıyor', 'İlk kullanımda birkaç saniye sürebilir', 0.02);
+      const w = await okuyucuHazirla();
+      for (let d = 0; d < dosyalar.length; d++) {
+        const ust = dosyalar.length > 1 ? 'Fotoğraf ' + (d + 1) + '/' + dosyalar.length + ' · ' : '';
+        ilerleme('Fotoğraf okunuyor', ust + 'görüntü temizleniyor', d / dosyalar.length);
+        await bekle(30);
+        const url = URL.createObjectURL(dosyalar[d]); resimler.push(url);
+        const img = new Image();
+        await new Promise((ok, hata) => { img.onload = ok; img.onerror = () => hata(new Error('Fotoğraf açılamadı.')); img.src = url; });
+        const o = Math.min(2, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+        const cw = Math.round(img.naturalWidth * o), ch = Math.round(img.naturalHeight * o);
+        const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+        const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(img, 0, 0, cw, ch);
+        const H = FOTO.hazirla(cx.getImageData(0, 0, cw, ch).data, cw, ch);
+        const satirlar = [], bc = document.createElement('canvas');
+        for (let i = 0; i < H.bantlar.length; i++) {
+          ilerleme('Fotoğraf okunuyor', ust + 'satır ' + (i + 1) + '/' + H.bantlar.length, (d + (i + 1) / H.bantlar.length) / dosyalar.length);
+          const r = FOTO.bantResmi(H.t, H.w, H.bantlar[i]);
+          bc.width = r.width; bc.height = r.height;
+          bc.getContext('2d').putImageData(new ImageData(r.data, r.width, r.height), 0, 0);
+          const { data } = await w.recognize(bc);
+          satirlar.push({ text: data.text.trim(), confidence: data.confidence });
+        }
+        const formOfs = tumu.reduce((m, x) => Math.max(m, x.form || 0), 0);
+        FOTO.cozumle(satirlar, tur).forEach(x => { x.form += formOfs; x.foto = d; tumu.push(x); });
+      }
+    } catch (err) { sayfaKapat(); toast(err.message || 'Fotoğraf okunamadı.'); return; }
+    tumu.forEach(x => {
+      const b = bolumYakala(x.bolum);
+      x.bolum = b.bolum; if (!b.kesin) x.supheli = true;
+      if (!x.birim) x.supheli = true;
+    });
+    kontrolAc(tur, tumu, resimler);
+  }
+
+  // Okunanları kontrol ekranı: kullanıcı fotoğrafla karşılaştırıp düzeltir, sonra kullanılır.
+  function kontrolAc(tur, R, resimler) {
+    const oku = () => $('st').querySelectorAll('.kr').forEach(e => {
+      const r = R[+e.dataset.i], v = a => e.querySelector('[data-a="' + a + '"]').value.trim();
+      r.kod = v('kod'); r.ad = v('ad'); r.miktar = v('miktar'); r.birim = v('birim'); r.bolum = v('bolum');
+    });
+    const ciz = () => {
+      const sup = R.filter(r => r.supheli).length;
+      sayfaAc(`<div style="font-size:17px;font-weight:600;text-align:center">Okunanları kontrol et</div>
+        <div class="sm" style="text-align:center;margin:4px 0 12px">${R.length} satır okundu${sup ? ' · <span style="color:var(--oT)">' + sup + ' satır şüpheli (turuncu)</span>' : ''}. Fotoğrafla karşılaştırıp düzelt; eksik satır varsa ekle.<br><b style="font-weight:600;color:var(--rT)">Fotoğraftan okuma hata yapabilir: turuncu olmayan satırların kodunu ve adedini de kontrol et. En güvenilir yol Excel.</b></div>
+        ${resimler.map((u, i) => `<details style="margin-bottom:8px"><summary class="lb" style="font-size:15px">Fotoğraf ${resimler.length > 1 ? i + 1 + ' ' : ''}göster</summary><img src="${u}" style="width:100%;border-radius:10px;margin-top:6px"></details>`).join('')}
+        <div class="gr">${R.map((r, i) => `<div class="kr${r.supheli ? ' sup' : ''}" data-i="${i}">
+          <input data-a="kod" value="${esc(r.kod)}" placeholder="Kod" inputmode="numeric">
+          <input data-a="miktar" value="${esc(r.miktar)}" placeholder="Adet" inputmode="decimal">
+          <input data-a="birim" value="${esc(r.birim)}" placeholder="Birim">
+          <input class="gen" data-a="ad" value="${esc(r.ad)}" placeholder="Malzeme adı">
+          <div class="gen" style="display:flex;gap:8px;align-items:center"><input data-a="bolum" value="${esc(r.bolum)}" placeholder="Bölüm" style="flex:1">${tur === 'form' ? `<span class="sm">Form ${r.form}</span>` : ''}<button class="sil" data-sil="${i}">Sil</button></div>
+        </div>`).join('') || '<div class="cl sm">Okunabilen satır yok. Elle ekleyebilirsin.</div>'}</div>
+        <button class="lb" id="kEkle" style="display:block;width:100%;margin:14px 0">+ Satır ekle</button>
+        <button class="pb" id="kOnay">Onayla ve kullan</button>
+        <button class="lb" id="kVaz" style="display:block;width:100%;margin-top:16px">Vazgeç</button>`);
+      $('st').querySelectorAll('[data-sil]').forEach(e => e.onclick = () => { oku(); R.splice(+e.dataset.sil, 1); ciz(); });
+      $('kEkle').onclick = () => { oku(); const son = R[R.length - 1] || {}; R.push({ kod: '', ad: '', miktar: '', birim: 'AD', bolum: son.bolum || '', form: son.form || 1, supheli: true }); ciz(); $('st').scrollTop = $('st').scrollHeight; };
+      $('kVaz').onclick = () => { if (confirm('Okunanlar kullanılmadan kapatılsın mı?')) sayfaKapat(); };
+      $('kOnay').onclick = () => {
+        oku();
+        const L = R.filter(r => r.kod || r.ad);
+        const kotu = L.find(r => isNaN(Number(String(r.miktar).replace(',', '.'))) || r.miktar === '');
+        if (kotu) return toast('"' + (kotu.ad || kotu.kod) + '" satırının adedi sayı değil.');
+        if (tur === 'sip' && L.some(r => !/^\d+$/.test(r.kod))) return toast('Sipariş listesinde her satırın kodu olmalı.');
+        const kalem = r => ({ kod: String(r.kod).replace(/\D/g, ''), ad: r.ad, ad2: '', miktar: Number(String(r.miktar).replace(',', '.')), birim: SK.birim(r.birim), birimHam: r.birim, bolumHam: r.bolum, aciklama: '', satir: 0 });
+        const ad = 'Fotoğraf · ' + resimler.length + ' sayfa';
+        if (tur === 'form') {
+          const nolar = [...new Set(L.map(r => r.form))];
+          D.form = nolar.map((no, i) => ({ no: i + 1, satir: 0, kalemler: L.filter(r => r.form === no).map(kalem) }));
+          D.formDosya = ad; D.cevap = { form: {} };
+        } else { D.sip = L.map(kalem); D.sipDosya = ad; }
+        D.durum = { onay: {}, red: {} }; D.sonuc = null; D.kayit = []; D.gecmis = [];
+        sayfaKapat(); ciz0();
+        if (D.form && D.sip) setTimeout(baslat, 400); else toast('Okunanlar kaydedildi.');
+      };
+    };
+    ciz();
   }
 
   // ---------- 1: Rapor ----------

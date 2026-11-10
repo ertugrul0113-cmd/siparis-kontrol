@@ -39,6 +39,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .qa{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .qa button{background:var(--bB);color:var(--bT);border-radius:16px;padding:7px 12px;font-size:14px;font-weight:500}
 .ust{text-decoration:line-through;opacity:.5}
+.kr{display:grid;grid-template-columns:1fr 64px 64px;gap:6px;padding:10px 12px;position:relative;background:var(--cell)}
+.kr input{height:34px;border:.5px solid var(--sep);border-radius:7px;background:var(--bg);color:var(--t1);font:inherit;font-size:15px;padding:0 8px;min-width:0;outline:none}
+.kr input:focus{border-color:var(--blue)}
+.kr .gen{grid-column:1/-1}
+.kr.sup{background:var(--oB)}
+.ilerleme{height:6px;border-radius:3px;background:var(--fill);overflow:hidden;margin:10px 0}
+.ilerleme div{height:100%;background:var(--blue);transition:width .3s}
 .gr{background:var(--cell);border-radius:10px;overflow:hidden}
 .cl{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:44px;position:relative;background:var(--cell)}
 .gr>*+*:before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep);z-index:2}
@@ -99,8 +106,11 @@ input[type=file]{display:none}
 <div class="toast" id="toast"></div>
 <input type="file" id="fForm" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
 <input type="file" id="fSip" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+<input type="file" id="pForm" accept="image/*" multiple>
+<input type="file" id="pSip" accept="image/*" multiple>
 <script src="vendor/xlsx.full.min.js"></script>
 <script src="logic.js"></script>
+<script src="foto.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
