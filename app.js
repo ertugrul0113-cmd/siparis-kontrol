@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const SURUM = '0.1.1 · 10.11.2026';
+  const SURUM = '0.1.2 · 10.11.2026';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const IC = {

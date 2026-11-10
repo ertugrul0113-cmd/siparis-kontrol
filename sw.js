@@ -12,12 +12,17 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
+  // Sunucu hata verirse ya da internet yoksa telefonda kayıtlı sürüm kullanılır.
+  const kayitli = hata => caches.match(r, { ignoreSearch: true })
+    .then(k => k || (r.mode === 'navigate' ? caches.match('index.html') : null))
+    .then(k => k || hata || Response.error());
   e.respondWith(
     fetch(r, { cache: 'no-cache' })
       .then(yanit => {
-        if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(r, kopya)); }
+        if (!yanit.ok) return kayitli(yanit);
+        const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(r, kopya));
         return yanit;
       })
-      .catch(() => caches.match(r, { ignoreSearch: true }).then(k => k || caches.match('index.html')))
+      .catch(() => kayitli(null))
   );
 });
