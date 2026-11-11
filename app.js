@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const SURUM = '0.4 · 10.11.2026';
+  const SURUM = '0.5 · 11.11.2026';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const IC = {
@@ -119,7 +119,7 @@
   function yuklemeGrubu(baslik, tur, dosya, bilgi) {
     const yuk = D.yukleniyor === tur;
     return `<div class="shk">${baslik}</div><div class="gr">
-      ${yuk ? '<div class="cl"><span class="sp"></span><span class="f1">Okunuyor…</span></div>' : dosya ? `<div class="cl"><span style="color:var(--green)">${IC.check}</span><div class="f1">${esc(dosya)}<div class="sm">${bilgi}</div></div></div>` : ''}
+      ${yuk ? '<div class="cl"><span class="sp"></span><span class="f1">Okunuyor…</span></div>' : dosya ? `<div class="cl"><span style="color:var(--green)">${IC.check}</span><div class="f1">${esc(dosya)}<div class="sm">${bilgi}</div></div><button class="sil" data-kaldir="${tur}">Kaldır</button></div>` : ''}
       <div class="cl tp xl" data-f="${tur}">${IC.table}<span class="f1">Excel seç</span>${IC.chev}</div>
       <div class="cl tp ft" data-foto="${tur}">${IC.cam}<span class="f1">Fotoğraf çek</span>${IC.chev}</div></div>`;
   }
@@ -132,6 +132,16 @@
     T[0].querySelectorAll('[data-f]').forEach(e => e.onclick = () => $(e.dataset.f === 'form' ? 'fForm' : 'fSip').click());
     T[0].querySelectorAll('[data-foto]').forEach(e => e.onclick = () => $(e.dataset.foto === 'form' ? 'pForm' : 'pSip').click());
     if ($('soruAc')) $('soruAc').onclick = baslat;
+    T[0].querySelectorAll('[data-kaldir]').forEach(e => e.onclick = () => kaldir(e.dataset.kaldir));
+  }
+  // Yüklenen dosyayı kaldırır; diğer dosya ve ayarlar yerinde kalır.
+  function kaldir(tur) {
+    const ad = tur === 'form' ? 'İstek formları' : 'Sipariş listesi';
+    if (D.kayit.length && !confirm('Yaptığın ' + D.kayit.length + ' düzeltme de silinecek. ' + ad + ' kaldırılsın mı?')) return;
+    if (tur === 'form') { D.form = null; D.formDosya = ''; D.cevap = { form: {} }; }
+    else { D.sip = null; D.sipDosya = ''; }
+    D.durum = { onay: {}, red: {} }; D.sonuc = null; D.kayit = []; D.gecmis = []; D.acikBolum = null;
+    sayfaKapat(); cizHepsi(); toast(ad + ' kaldırıldı.');
   }
 
   // ---------- Fotoğraftan okuma ----------
@@ -268,7 +278,8 @@
   // ---------- 1: Rapor ----------
   const ETIKET = { EKSIK: ['Eksik', 'r'], FAZLA: ['Fazla', 'r'], CAKISMA: ['Kod çakışması', 'r'], KODHATA: ['Kod hatası?', 'p'], ESKIKOD: ['Eski kod', 'p'], ADET: ['Adet farkı', 'o'], BIRIM: ['Birim farkı', 'o'], TAHMIN: ['Tahmin', 'b'], KODSUZ: ['Kodsuz', 'n'], FORMYOK: ['Form yok', 'n'] };
   const SIRA = ['CAKISMA', 'EKSIK', 'FAZLA', 'KODHATA', 'ESKIKOD', 'TAHMIN', 'KODSUZ', 'BIRIM', 'ADET', 'FORMYOK'];
-  const etiket = s => s.onayli ? '<span class="ip i-g">Onaylandı</span>' : `<span class="ip i-${ETIKET[s.tip][1]}">${ETIKET[s.tip][0]}</span>`;
+  const yokSayilir = s => s.tip === 'EKSIK' || s.tip === 'FAZLA';
+  const etiket = s => s.onayli ? `<span class="ip i-g">${yokSayilir(s) ? 'Görmezden gelindi' : 'Onaylandı'}</span>` : `<span class="ip i-${ETIKET[s.tip][1]}">${ETIKET[s.tip][0]}</span>`;
 
   function ciz1() {
     const R = D.sonuc;
@@ -314,6 +325,19 @@
       sr.map(x => x.i).sort((a, c) => c - a).forEach(i => D.sip.splice(i, 1));
       return [b + ': ' + s.kod + ' ' + s.ad + ' siparişten çıkarıldı (' + s.siparis + ')'];
     });
+    if (s.tip === 'FAZLA' && sr.length) {
+      // Bu bölümün formunu bul (karşılaştırmadaki bölüm çözme kuralıyla aynı).
+      const fi = D.form.findIndex(f => {
+        const dolu = f.kalemler.find(k => k.bolumHam);
+        return dolu ? f.kalemler.some(k => SK.bolumCoz(k.bolumHam || dolu.bolumHam, ayar) === b) : SK.bolumCoz(D.cevap.form[f.no], ayar) === b;
+      });
+      if (fi >= 0) yap('Forma ekle (' + s.siparis + ')', () => {
+        const k = sr[0].k, f = D.form[fi];
+        f.kalemler.push({ kod: k.kod, ad: k.ad, miktar: s.siparis, birim: k.birim, birimHam: k.birimHam || k.birim, bolumHam: f.kalemler.some(x => x.bolumHam) ? b : '', aciklama: '', satir: 0 });
+        return [b + ': ' + k.kod + ' ' + k.ad + ' forma eklendi (' + s.siparis + ')'];
+      });
+    }
+    if (yokSayilir(s)) q.push({ ad: s.onayli ? 'Görmezden gelmeyi geri al' : 'Görmezden gel', hafif: () => { if (s.onayli) delete D.durum.onay[s.id]; else D.durum.onay[s.id] = true; return s.onayli ? 'Yeniden sorunlu sayıldı.' : 'Görmezden gelindi. Sadece bu karşılaştırma için geçerli.'; } });
     if (s.tip === 'KODHATA') {
       yap('Siparişteki kodu ' + s.kod + ' yap', () => { sr.forEach(x => { x.k.kod = s.kod; }); return [b + ': siparişte kod ' + s.kod2 + ' → ' + s.kod]; });
       yap('Formdaki kodu ' + s.kod2 + ' yap', () => { fr.forEach(x => { x.k.kod = s.kod2; }); return [b + ': formda kod ' + s.kod + ' → ' + s.kod2]; });
@@ -338,7 +362,11 @@
       e.textContent = silinen.has(i) ? 'Geri al' : 'Sil';
       $('st').querySelector('[data-ad="s' + i + '"]').classList.toggle('ust', silinen.has(i));
     });
-    $('st').querySelectorAll('[data-q]').forEach(e => e.onclick = () => { anlik(); kaydet(q[+e.dataset.q].fn()); sayfaKapat(); hesapla(); toast('Düzeltildi.'); });
+    $('st').querySelectorAll('[data-q]').forEach(e => e.onclick = () => {
+      const x = q[+e.dataset.q];
+      if (x.hafif) { const m = x.hafif(); sayfaKapat(); tazele(); toast(m); return; }
+      anlik(); kaydet(x.fn()); sayfaKapat(); hesapla(); toast('Düzeltildi.');
+    });
     $('dzVaz').onclick = sayfaKapat;
     if ($('dzKaydet')) $('dzKaydet').onclick = () => {
       const oku = (sel, i) => $('st').querySelector('[data-' + sel + '="' + i + '"]').value.trim();
@@ -387,6 +415,7 @@
       const onaylanir = (s.tip === 'ADET' || s.tip === 'BIRIM') && !s.onayli;
       let sag = '';
       if (onaylanir) sag = `<button class="lb" data-onay="${i}">Doğru</button>`;
+      if (yokSayilir(s) && !s.onayli) sag = `<button class="lb" data-onay="${i}" style="font-size:13px;text-align:right">Görmezden<br>gel</button>`;
       if (s.tip === 'TAHMIN' && !s.onayli) sag = `<button class="lb" data-th="${i}" style="color:var(--green);font-weight:600">✔</button><button class="lb" data-tr="${i}" style="color:var(--red);font-weight:600;margin-left:12px">✖</button>`;
       if (s.tip === 'KODHATA' && !s.onayli) sag = `<button class="lb" data-es="${i}" style="font-size:13px;text-align:right">Eşdeğer<br>kaydet</button>`;
       const ic = `<div class="cl tp${onaylanir ? ' sf' : ''}" data-dz="${i}" ${onaylanir ? 'data-sw="' + i + '"' : ''}>${etiket(s)}<div class="f1" style="font-size:15px">${esc(m1)}<div class="sm">${esc(m2)}</div></div>${sag}<span class="ch">&#x203A;</span></div>`;
@@ -400,7 +429,7 @@
       <div class="gr">${b.dogru.map(d => `<div class="cl"><span style="color:var(--green)">✓</span><div class="f1" style="font-size:15px">${esc(d.kod)} ${esc(d.ad)}${d.not ? '<div class="sm">' + esc(d.not) + '</div>' : ''}</div><span class="sm">${d.miktar} ${esc(d.birim)}</span></div>`).join('') || '<div class="cl sm">Yok</div>'}</div>`;
     $('geri').onclick = () => { D.acikBolum = null; geri(); };
     const bul = i => sorunlar[+i];
-    $('d1').querySelectorAll('[data-onay]').forEach(e => e.onclick = () => { D.durum.onay[bul(e.dataset.onay).id] = true; tazele(); toast('Onaylandı. Sadece bu karşılaştırma için geçerli.'); });
+    $('d1').querySelectorAll('[data-onay]').forEach(e => e.onclick = () => { const s = bul(e.dataset.onay); D.durum.onay[s.id] = true; tazele(); toast((yokSayilir(s) ? 'Görmezden gelindi' : 'Onaylandı') + '. Sadece bu karşılaştırma için geçerli.'); });
     $('d1').querySelectorAll('[data-th]').forEach(e => e.onclick = () => { const s = bul(e.dataset.th); ayar.ogrenilen[s.anahtarAd] = s.kod; ayarKaydet(); D.durum.onay[s.id] = true; hesapla(); toast('Tahmin onaylandı ve hatırlanacak.'); });
     $('d1').querySelectorAll('[data-tr]').forEach(e => e.onclick = () => { const s = bul(e.dataset.tr); D.durum.red[b.ad + '|' + s.anahtarAd + '|' + s.kod] = true; hesapla(); toast('Tahmin reddedildi.'); });
     $('d1').querySelectorAll('[data-es]').forEach(e => e.onclick = () => {
