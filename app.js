@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const SURUM = '0.5 · 11.11.2026';
+  const SURUM = '0.6 · 11.11.2026';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const IC = {
@@ -347,7 +347,7 @@
 
     const [m1, m2] = satirMetni(s);
     const satir = (taraf, idx, k, silinir) => `<div class="cl" style="flex-wrap:wrap;gap:8px">
-        <div style="flex-basis:100%;font-size:14px;display:flex;gap:8px;align-items:center"><span class="ip i-${taraf === 'f' ? 'b' : 'n'}">${taraf === 'f' ? 'Form' : 'Sipariş'}</span><span class="f1" data-ad="${taraf}${idx}">${esc(k.ad)}</span>${silinir ? `<button class="sil" data-sil="${idx}">Sil</button>` : ''}</div>
+        <div style="flex-basis:100%;font-size:14px;display:flex;gap:8px;align-items:center"><span class="ip i-${taraf === 'f' ? 'b' : 'n'}">${taraf === 'f' ? 'Form' : 'Sipariş'}</span><span class="f1" data-ad="${taraf}${idx}">${esc(k.ad)}</span><button class="sil" data-sil="${taraf}${idx}">Sil</button></div>
         <label class="fi" style="flex:2">Kod<input data-${taraf}k="${idx}" value="${esc(k.kod)}" inputmode="numeric"></label>
         <label class="fi" style="flex:1">Adet<input data-${taraf}m="${idx}" value="${k.miktar}" inputmode="decimal"></label></div>`;
     sayfaAc(`<div style="display:flex;gap:8px;align-items:center">${etiket(s)}<span class="sm">${esc(b)}</span></div>
@@ -358,9 +358,10 @@
       ${fr.length + sr.length ? '<button class="pb" id="dzKaydet">Kaydet</button>' : ''}<button class="lb" id="dzVaz" style="display:block;width:100%;margin-top:16px">Vazgeç</button>`);
     const silinen = new Set();
     $('st').querySelectorAll('[data-sil]').forEach(e => e.onclick = () => {
-      const i = +e.dataset.sil; silinen.has(i) ? silinen.delete(i) : silinen.add(i);
+      const i = e.dataset.sil; silinen.has(i)
+ ? silinen.delete(i) : silinen.add(i);
       e.textContent = silinen.has(i) ? 'Geri al' : 'Sil';
-      $('st').querySelector('[data-ad="s' + i + '"]').classList.toggle('ust', silinen.has(i));
+      $('st').querySelector('[data-ad="' + i + '"]').classList.toggle('ust', silinen.has(i));
     });
     $('st').querySelectorAll('[data-q]').forEach(e => e.onclick = () => {
       const x = q[+e.dataset.q];
@@ -378,14 +379,19 @@
         if (kod !== String(x.k.kod || '')) { deg.push(b + ': ' + yer + ' ' + (x.k.ad || '') + ' kod ' + (x.k.kod || 'boş') + ' → ' + (kod || 'boş')); uygula.push(() => { x.k.kod = kod; }); }
         if (m !== x.k.miktar) { deg.push(b + ': ' + yer + ' ' + (x.k.kod || x.k.ad) + ' adet ' + x.k.miktar + ' → ' + m); uygula.push(() => { x.k.miktar = m; }); }
       };
-      fr.forEach((x, i) => kontrol('f', x, i, 'formda'));
-      sr.forEach((x, i) => { if (!silinen.has(i)) kontrol('s', x, i, 'siparişte'); });
+      fr.forEach((x, i) => { if (!silinen.has('f' + i)) kontrol('f', x, i, 'formda'); });
+      sr.forEach((x, i) => { if (!silinen.has('s' + i)) kontrol('s', x, i, 'siparişte'); });
       if (hata) { toast(hata); return; }
-      silinen.forEach(i => deg.push(b + ': ' + sr[i].k.kod + ' ' + sr[i].k.ad + ' siparişten silindi'));
+      const fSil = fr.filter((x, i) => silinen.has('f' + i)), sSil = sr.filter((x, i) => silinen.has('s' + i));
+      fSil.forEach(x => deg.push(b + ': ' + (x.k.kod || 'kodsuz') + ' ' + x.k.ad + ' formdan silindi (' + x.k.miktar + ')'));
+      sSil.forEach(x => deg.push(b + ': ' + x.k.kod + ' ' + x.k.ad + ' siparişten silindi'));
       if (!deg.length) { sayfaKapat(); return; }
       anlik();
       uygula.forEach(f => f());
-      [...silinen].map(i => sr[i].i).sort((a, c) => c - a).forEach(i => D.sip.splice(i, 1));
+      sSil.map(x => x.i).sort((a, c) => c - a).forEach(i => D.sip.splice(i, 1));
+      // Bölüm adı formda tek satırda yazılı olabilir; silinen o satırsa kalanlar bölümsüz kalmasın.
+      new Set(fSil.map(x => x.r[0])).forEach(fi => { const ks = D.form[fi].kalemler, dolu = ks.find(k => k.bolumHam); if (dolu) ks.forEach(k => { if (!k.bolumHam) k.bolumHam = dolu.bolumHam; }); });
+      fSil.map(x => x.r).sort((a, c) => c[1] - a[1]).forEach(r => D.form[r[0]].kalemler.splice(r[1], 1));
       kaydet(deg); sayfaKapat(); hesapla(); toast('Düzeltildi.');
     };
   }

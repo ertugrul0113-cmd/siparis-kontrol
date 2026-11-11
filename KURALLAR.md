@@ -56,6 +56,7 @@ Malzeme istek formları (bölümlerin istekleri) ile satınalmaya geçilen sipar
 - Bölüme dokununca detay sağdan gelir; adet/birim farkı satırları sola kaydırılarak ya da "Doğru" düğmesiyle onaylanır.
 - Hata satırına dokununca düzeltme penceresi açılır: hızlı düzeltmeler (siparişe ekle, siparişten çıkar, kodu düzelt, adedi forma eşitle) ve elle kod/adet düzenleme. Sonuç anında yeniden hesaplanır; düzeltmeler Rapor'un üstünde listelenir, "Son düzeltmeyi geri al" var. Sipariş düzeltmeleri gönderilen Düzeltilmiş Sipariş Excel'ine yansır; form düzeltmeleri sadece o karşılaştırmada geçerli.
 - Eksik ve Fazla satırlarında (0.5, kullanıcı isteği): **Görmezden gel** (satırda ve düzeltme penceresinde; sadece o karşılaştırmada geçerli, hatırlanmaz, pencereden geri alınabilir). Fazla satırında ayrıca **Forma ekle**, Eksik satırında **Siparişe ekle**.
+- Düzeltme penceresinde form satırlarında da **Sil** var (0.6, kullanıcı isteği; önce sadece sipariş satırlarında vardı). Kod çakışmasında fazladan yazılmış satırı silmek için istendi; form satırı görünen bütün hata türlerinde çıkar. Sil → ad üstü çizilir, Kaydet'e basınca silinir, düzeltmeler listesine yazılır, geri alınabilir. Sadece o karşılaştırmada geçerli. Silinen satırın adedi form toplamından düşer.
 - Ayarlar: Bölüm listesi, bölüm eşleşmeleri, eşdeğer kodlar, öğrenilmiş kodlar ayrı sayfalarda; ekleme ve silme var; "Başlangıç ayarlarına dön".
 - Ana sayfada "İstek formları" / "Sipariş listesi" başlıkları büyük ve kırmızı; Ayarlar başlıkları büyük.
 
